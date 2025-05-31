@@ -8,6 +8,7 @@ class Persona:
         self._username = usuario.username
         self._edad = usuario.edad
         self._telefono = usuario.telefono
+        self.sid = None
 
     @property
     def username(self):

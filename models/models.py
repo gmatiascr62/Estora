@@ -11,7 +11,6 @@ class Usuario(Base):
     edad = Column(Integer, nullable=True)
     telefono = Column(String, nullable=True)
     token = Column(String, nullable=True)
-    sid = Column(String, nullable=True)
 
     def __repr__(self):
         return f"<Usuario - {self.username}>"
@@ -23,7 +22,6 @@ class Usuario(Base):
             "edad": self.edad,
             "telefono": self.telefono,
             "token": self.token,
-            "sid": self.sid,
         }
 
 class Mensaje(Base):

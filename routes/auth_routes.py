@@ -16,16 +16,22 @@ async def login_get(request: Request):
 
 
 @router.post("/login")
-async def login_post(
-    request: Request,
-    username: str = Form(...),
-    db: Session = Depends(get_db)
-):
+async def login_post(request: Request, username: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(Usuario).filter(Usuario.username == username).first()
     if not user:
         return templates.TemplateResponse("login.html", {"request": request, "error": "Usuario no encontrado"})
 
+    # Crear nuevo token
     token = create_token({"user_id": user.user_id, "username": user.username})
+
+    # Verificar si ya tiene un token en la base
+    if user.token and user.token != token:
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Sesión activa en otro dispositivo"})
+
+    # Guardar token en base si no había uno
+    user.token = token
+    db.commit()
+
     request.session["user_data"] = {
         "token": token,
         "username": user.username,
@@ -33,7 +39,6 @@ async def login_post(
     }
 
     return RedirectResponse("/", status_code=303)
-
 
 @router.get("/register", response_class=HTMLResponse)
 async def register_get(request: Request):
@@ -57,7 +62,7 @@ async def register_post(
     token = create_token({"user_id": nuevo_usuario.user_id, "username": nuevo_usuario.username})
     request.session["user_data"] = {"token": token}
 
-    return RedirectResponse("/logout", status_code=303)
+    return RedirectResponse("/login", status_code=303)
 
 
 @router.post("/actualizar_telefono")
@@ -77,7 +82,13 @@ async def actualizar_telefono(request: Request):
         return JSONResponse(content={"mensaje": "Usuario no encontrado en memoria."}, status_code=404)
 
 @router.get("/logout")
-async def logout(request: Request):
+async def logout(request: Request, db: Session = Depends(get_db)):
+    user_data = request.session.get("user_data")
+    if user_data:
+        user = db.query(Usuario).filter(Usuario.user_id == user_data["id"]).first()
+        if user:
+            user.token = None
+            db.commit()
     request.session.clear()
-    set_current_user(None)
     return RedirectResponse("/login", status_code=303)
+
